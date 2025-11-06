@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>UsRewardCenter - Post</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="header">
+    <div class="container">
+      <div class="brand">
+        <img src="static/default-offer.jpg" alt="logo" style="width:44px;height:44px;border-radius:8px;object-fit:cover">
+        <div>
+          <h1>UsRewardCenter</h1>
+          <div style="font-size:12px;color:rgba(255,255,255,0.85)">Verified US Gift Card Offers</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <a href="/">Home</a>
+        <a href="/admin/" class="tag">New Blog</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div id="postWrap" class="post-content">
+      <div class="small">Loading post…</div>
+    </div>
+  </main>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+function getQuery(name){ return new URLSearchParams(window.location.search).get(name); }
+function parseFrontMatter(md){
+  const fm={data:{}, body:md};
+  if(md.startsWith('---')){ const end = md.indexOf('---',3); if(end!==-1){ const yaml = md.substring(3,end).trim(); fm.body = md.substring(end+3).trim(); yaml.split('\n').forEach(line=>{ const idx = line.indexOf(':'); if(idx>0){ const key=line.substring(0,idx).trim(); let value=line.substring(idx+1).trim(); value=value.replace(/^["']|["']$/g,''); fm.data[key]=value; } }); } }
+  return fm;
+}
+
+async function loadPost(){
+  const slug = getQuery('post');
+  if(!slug){ document.getElementById('postWrap').innerHTML = '<div class="small">No post specified.</div>'; return; }
+  const rawUrl = `/content/posts/${slug}.md`;
+  try{
+    const res = await fetch(rawUrl);
+    if(!res.ok){ document.getElementById('postWrap').innerHTML = '<div class="small">Post not found.</div>'; return; }
+    const md = await res.text();
+    const parsed = parseFrontMatter(md);
+    renderPost(parsed.data, parsed.body, slug);
+  }catch(err){
+    document.getElementById('postWrap').innerHTML = '<div class="small">Error loading post.</div>';
+    console.error(err);
+  }
+}
+
+function renderPost(meta, body, slug){
+  const html = marked.parse(body);
+  const hero = meta.image? `<img src="${meta.image}" class="post-hero" alt="${meta.title}">` : '';
+  const claimUrl = meta.link || '#';
+  document.getElementById('postWrap').innerHTML = `
+    <h2>${meta.title || 'Untitled'}</h2>
+    <div class="post-meta">${meta.date || ''} • ${meta.author || ''}</div>
+    ${hero}
+    <div class="post-body">${html}</div>
+    <div style="margin-top:20px;display:flex;gap:12px;align-items:center">
+      <a class="claim-btn" href="${claimUrl}" target="_blank" rel="noopener">Claim Offer</a>
+      <button onclick="navigator.clipboard.writeText(location.href)" class="copy-link">Copy Post Link</button>
+    </div>
+  `;
+}
+
+loadPost();
+</script>
+</body>
+</html>
